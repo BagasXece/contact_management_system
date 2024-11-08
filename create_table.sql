@@ -1,6 +1,6 @@
 CREATE DATABASE contact_management;
 
-use contact_management;
+USE contact_management;
 
 
 CREATE TABLE contacts (
