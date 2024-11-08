@@ -1,188 +1,113 @@
+document.addEventListener('DOMContentLoaded', loadContacts);
 
+document.getElementById('contactForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
 
-function editContact(id, name, email, phone, address) { 
-    document.getElementById('name').value = name; 
-    document.getElementById('email').value = email; 
-    document.getElementById('phone').value = phone; 
-    document.getElementById('address').value = address; 
-    document.getElementById('contactId').value = id; 
-    document.getElementById('submitBtn').innerText = "Update Contact"; 
-    document.getElementById('submitBtn').disabled = false; 
-} 
+    const name = document.getElementById('name').value;
+    const email = document.getElementById('email').value;
+    const phone = document.getElementById('phone').value;
+    const address = document.getElementById('address').value;
 
-document.getElementById('contactForm').addEventListener('submit', function(e) { 
-    e.preventDefault(); 
-    const email = document.getElementById('email').value; 
-    const phone = document.getElementById('phone').value; 
+    if (!phone.match(/^\d{3,}[0-9]+$/)) {
+        alert('Nomor telepon harus berupa angka dan minimal 3 digit.');
+        return;
+    }
 
-    // Validasi email 
-    const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/; 
-    if (!emailPattern.test(email)) { 
-        alert('Please enter a valid email address.'); 
-        return; 
-    } 
+    if (!email.match(/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/)) {
+        alert('Alamat email yang anda masukan tidak valid');
+    }
 
-    // Validasi nomor telepon (hanya angka) 
-    const phonePattern = /^[0-9]+$/; 
-    if (!phonePattern.test(phone)) { 
-        alert('Phone number should contain only numbers.'); 
-        return; 
-    } 
+    const response = await fetch('contact.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            action: 'add', name, email, phone, address
+        })
+    });
+    if (response.ok) {
+        document.getElementById('contactForm').reset();
+        loadContacts();
+    }
+});
 
-    const formData = new FormData(this); 
-    if(document.getElementById('contactId').value){ 
-        fetch('php/update_contact.php', { 
-            method: 'POST', 
-            body: formData 
-        }) 
-        .then(response => response.text()) 
-        .then(data => { 
-            alert(data); 
-            loadContacts(); 
-            this.reset(); 
-            document.getElementById('submitBtn').innerText = "Add Contact"; 
-            document.getElementById('submitBtn').disabled = false; 
-        }); 
-    } else { 
-        fetch('php/add_contact.php', { 
-            method: 'POST', 
-            body: formData 
-        }) 
-        .then(response => response.text()) 
-        .then(data => { 
-            alert(data); 
-            loadContacts(); 
-            this.reset(); 
-            document.getElementById('submitBtn').innerText = "Add Contact"; 
-            document.getElementById('submitBtn').disabled = false; 
-        }); 
-    } 
-}); 
+async function loadContacts() {
+    const response = await fetch('contact.php?action=list');
+    const contacts = await response.json();
 
-function loadContacts() { 
-    fetch('php/load_contacts.php') 
-    .then(response => response.json()) 
-    .then(data => { 
-        const contactList = document.getElementById('contactList'); 
-        contactList.innerHTML = ''; 
-        data.forEach(contact => { 
-            const row = document.createElement('tr'); 
-            row.innerHTML = ` 
-                <td>${contact.name}</td> 
-                <td>${contact.email}</td> 
-                <td>${contact.phone}</td> 
-                <td>${contact.address}</td> 
-                <td> 
-                    <button class="btn btn-primary" onclick="editContact(${contact.id}, '${contact.name}', '${contact.email}', '${contact.phone}', '${contact.address}')">Edit</button> 
-                    <button class="btn btn-danger" onclick="deleteContact(${contact.id})">Delete</button> 
-                </td> 
-            `; 
-            contactList.appendChild(row); 
-        }); 
-    }); 
-} 
+    const contactTable = document.getElementById('contactTable');
+    contactTable.innerHTML = '';
 
-function deleteContact(id) { 
-    fetch(`php/delete_contact.php?id=${id}`, { 
-        method: 'GET' 
-    }) 
-    .then(response => response.text()) 
-    .then(data => { 
-        alert(data); 
-        loadContacts(); 
-    }); 
+    contacts.forEach(contact => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${contact.name}</td>
+            <td>${contact.email}</td>
+            <td>${contact.phone}</td>
+            <td>${contact.address}</td>
+            <td>
+                <button onclick="editContact(${contact.id})">Edit</button>
+                <button onclick="deleteContact(${contact.id})">Delete</button>
+            </td>
+        `;
+        contactTable.appendChild(row);
+    });
 }
 
+async function deleteContact(id) {
+    if (confirm('Apakah Anda yakin ingin menghapus kontak ini?')) {
+        await fetch('contact.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'delete', id
+            })
+        });
+        loadContacts();
+    }
+}
 
-function editContact(id, name, email, phone, address) { 
-    document.getElementById('name').value = name; 
-    document.getElementById('email').value = email; 
-    document.getElementById('phone').value = phone; 
-    document.getElementById('address').value = address; 
-    document.getElementById('contactId').value = id; 
-    document.getElementById('submitBtn').innerText = "Update Contact"; 
-    document.getElementById('submitBtn').disabled = false; 
-} 
+async function editContact(id) {
+    const response = await fetch('contact.php?action=get&id=' + id);
+    const contact = await response.json();
 
-document.getElementById('contactForm').addEventListener('submit', function(e) { 
-    e.preventDefault(); 
-    const email = document.getElementById('email').value; 
-    const phone = document.getElementById('phone').value; 
+    document.getElementById('name').value = contact.name;
+    document.getElementById('email').value = contact.email;
+    document.getElementById('phone').value = contact.phone;
+    document.getElementById('address').value = contact.address;
 
-    // Validasi email 
-    const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/; 
-    if (!emailPattern.test(email)) { 
-        alert('Please enter a valid email address.'); 
-        return; 
-    } 
+    document.getElementById('contactForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
 
-    // Validasi nomor telepon (hanya angka) 
-    const phonePattern = /^[0-9]+$/; 
-    if (!phonePattern.test(phone)) { 
-        alert('Phone number should contain only numbers.'); 
-        return; 
-    } 
+        const name = document.getElementById('name').value;
+        const email = document.getElementById('email').value;
+        const phone = document.getElementById('phone').value;
+        const address = document.getElementById('address').value;
 
-    const formData = new FormData(this); 
-    if(document.getElementById('contactId').value){ 
-        fetch('php/update_contact.php', { 
-            method: 'POST', 
-            body: formData 
-        }) 
-        .then(response => response.text()) 
-        .then(data => { 
-            alert(data); 
-            loadContacts(); 
-            this.reset(); 
-            document.getElementById('submitBtn').innerText = "Add Contact"; 
-            document.getElementById('submitBtn').disabled = false; 
-        }); 
-    } else { 
-        fetch('php/add_contact.php', { 
-            method: 'POST', 
-            body: formData 
-        }) 
-        .then(response => response.text()) 
-        .then(data => { 
-            alert(data); 
-            loadContacts(); 
-            this.reset(); 
-            document.getElementById('submitBtn').innerText = "Add Contact"; 
-            document.getElementById('submitBtn').disabled = false; 
-        }); 
-    } 
-}); 
+        if (!phone.match(/^\d{3,}[0-9]+$/)) {
+            alert('Nomor telepon harus berupa angka dan minimal 3 digit.');
+            return;
+        }
+    
+        if (!email.match(/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/)) {
+            alert('Alamat email yang anda masukan tidak valid');
+        }
 
-function loadContacts() { 
-    fetch('php/load_contacts.php') 
-    .then(response => response.json()) 
-    .then(data => { 
-        const contactList = document.getElementById('contactList'); 
-        contactList.innerHTML = ''; 
-        data.forEach(contact => { 
-            const row = document.createElement('tr'); 
-            row.innerHTML = ` 
-                <td>${contact.name}</td> 
-                <td>${contact.email}</td> 
-                <td>${contact.phone}</td> 
-                <td>${contact.address}</td> 
-                <td> 
-                    <button class="btn btn-primary" onclick="editContact(${contact.id}, '${contact.name}', '${contact.email}', '${contact.phone}', '${contact.address}')">Edit</button> 
-                    <button class="btn btn-danger" onclick="deleteContact(${contact.id})">Delete</button> 
-                </td> 
-            `; 
-            contactList.appendChild(row); 
-        }); 
-    }); 
-} 
-
-function deleteContact(id) { 
-    fetch(`php/delete_contact.php?id=${id}`, { 
-        method: 'GET' 
-    }) 
-    .then(response => response.text()) 
-    .then(data => { 
-        alert(data); 
-        loadContacts(); 
-    }); 
+        const response = await fetch('contact.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'update', id, name, email, phone, address
+            })
+        });
+        if (response.ok) {
+            document.getElementById('contactForm').reset();
+            loadContacts();
+        }
+    });
 }
